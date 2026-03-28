@@ -8,7 +8,6 @@ and calculating polygon area in hectares using proper projections.
 from typing import List, Optional, Tuple
 
 import geopandas as gpd
-import pandas as pd
 from shapely.geometry import Polygon
 
 

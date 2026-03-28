@@ -125,7 +125,7 @@ def resample_to_monthly(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.set_index("date", inplace=True)
     monthly = df["ndvi"].resample("MS").mean()
-    return monthly.reset_index().rename(columns={"ndvi": "ndvi"})
+    return monthly.reset_index()
 
 
 def get_data_summary(df: pd.DataFrame) -> dict:

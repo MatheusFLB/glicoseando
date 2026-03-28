@@ -6,7 +6,6 @@ an interactive geospatial analysis dashboard.
 """
 
 import json
-from pathlib import Path
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -137,7 +136,6 @@ def main():
             help="Choose a date to view NDVI on the map"
         )
 
-        selected_date = pd.Timestamp(selected_date_picker)
         idx = (ndvi_df['date'].dt.date - selected_date_picker).abs().argmin()
         closest_date = ndvi_df.iloc[idx]["date"]
         ndvi_at_date = ndvi_df.iloc[idx]["ndvi"]
@@ -153,12 +151,6 @@ def main():
 
         map_html = m._repr_html_()
 
-        # Process map HTML to make it fully responsive
-        map_html = map_html.replace('width: 100%;', 'width: 100%;')
-        map_html = map_html.replace('height: 500px;', 'height: 100%;')
-
-        MAP_HEIGHT = 500
-
         # Perfectly centered vertical responsive map container
         responsive_html = f"""
         <div style="
@@ -171,7 +163,7 @@ def main():
             <div style="
                 width: 100%;
                 max-width: 800px;
-                height: {MAP_HEIGHT}px;
+                height: 800px;
                 min-height: 600px;
                 border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -181,7 +173,7 @@ def main():
             </div>
         </div>
         """
-        components.v1.html(responsive_html, height=MAP_HEIGHT, scrolling=False)
+        components.v1.html(responsive_html, height=800, scrolling=False)
 
 
         # ==================== NDVI TIME SERIES + CHANGE DETECTION (COMBINED) ====================
@@ -246,7 +238,6 @@ def main():
 
         # Add year boundary markers (only for full series)
         shapes = []
-        change_points = []  # Initialize change_points for metrics calculation
         if not selected_year:
             # Show red dashed lines at year boundaries for full temporal range
             years_in_range = sorted(ndvi_df["date"].dt.year.unique())
@@ -277,14 +268,6 @@ def main():
         )
 
         st.plotly_chart(fig, use_container_width=True)
-
-        # Calculate change detection metrics for internal use (not displayed)
-        try:
-            if change_points:
-                deforestation_info = estimate_deforestation_onset(ndvi_df, change_points)
-                intensity = calculate_intensity_score(ndvi_df)
-        except ImportError:
-            pass
 
         # ==================== ANNUAL METRICS ====================
         st.header("📋 Annual NDVI Trends (2000–2026)")

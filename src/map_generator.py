@@ -5,13 +5,11 @@ This module creates interactive maps using Folium to visualize
 polygon geometry and NDVI statistics.
 """
 
-from pathlib import Path
-from typing import Optional, Tuple
+from typing import Tuple
 
 import folium
 import geopandas as gpd
 import numpy as np
-from folium import plugins
 
 
 def get_color_for_ndvi(ndvi_value: float) -> str:
@@ -222,29 +220,11 @@ def create_ndvi_legend(m: folium.Map) -> folium.Map:
     return m
 
 
-def save_map(m: folium.Map, filepath: str | Path) -> None:
-    """
-    Save Folium map to HTML file.
-
-    Parameters
-    ----------
-    m : folium.Map
-        Folium map object.
-    filepath : str or Path
-        Path where the HTML file will be saved.
-    """
-    filepath = Path(filepath)
-    filepath.parent.mkdir(parents=True, exist_ok=True)
-    m.save(str(filepath))
-    print(f"Map saved to: {filepath}")
-
-
 def create_full_featured_map(
     gdf: gpd.GeoDataFrame,
     center_coords: Tuple[float, float],
     mean_ndvi: float,
     area_ha: float,
-    save_path: Optional[str | Path] = None,
     include_legend: bool = False,
 ) -> folium.Map:
     """
@@ -260,8 +240,6 @@ def create_full_featured_map(
         Mean NDVI value.
     area_ha : float
         Area in hectares.
-    save_path : str or Path, optional
-        If provided, saves the map to this path.
     include_legend : bool, default=False
         If False, legend is shown outside the map (in dashboard).
 
@@ -279,9 +257,5 @@ def create_full_featured_map(
     # Only include legend if specified (for standalone map files)
     if include_legend:
         m = create_ndvi_legend(m)
-
-    # Save if path provided
-    if save_path:
-        save_map(m, save_path)
 
     return m

@@ -40,7 +40,7 @@ This project analyzes a time series of **NDVI (Normalized Difference Vegetation 
 
 - **Satellite:** MODIS (Terra/Aqua)
 - **Resolution:** 250m spatial × 8–16 day temporal
-- **Period:** 2000–02-18 to 2026–02-10 (1,144 observations)
+- **Period:** 2000–02-18 to 2026–02-10 (1,142 observations)
 - **Provider:** Embrapa Informática Agropecuária (SATVeg - Sistema de Análise Temporal da Vegetação)
 
 **Study Area:**

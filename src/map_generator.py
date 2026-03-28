@@ -74,12 +74,17 @@ def create_interactive_map(
     folium.Map
         Folium Map object ready for rendering.
     """
-    # Create base map
+    # Create base map with responsive sizing
     m = folium.Map(
         location=center_coords,
         zoom_start=13,
         tiles="OpenStreetMap",
+        prefer_canvas=True,  # Better rendering for mobile
     )
+
+    # Make the map container responsive
+    m.get_root().width = "100%"
+    m.get_root().height = "100%"
 
     # Get color based on NDVI
     polygon_color = get_color_for_ndvi(mean_ndvi)
@@ -184,10 +189,15 @@ def create_ndvi_legend(m: folium.Map) -> folium.Map:
         Map with legend added.
     """
     legend_html = """
-    <div style="position: fixed;
-             bottom: 50px; left: 50px; width: 220px; height: 200px;
-             background-color: white; border:2px solid grey; z-index:9999;
-             font-size:14px; padding: 10px">
+    <div style="position: absolute;
+             top: 10px; left: 10px; width: 220px;
+             background-color: white;
+             border: 2px solid grey;
+             z-index: 9999;
+             font-size: 14px;
+             padding: 10px;
+             border-radius: 5px;
+             box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
         <b>NDVI Classification</b><br>
         <i style="background: #8B4513; width: 18px; height: 18px;
                   display: inline-block; border: 1px solid black;"></i>
@@ -235,6 +245,7 @@ def create_full_featured_map(
     mean_ndvi: float,
     area_ha: float,
     save_path: Optional[str | Path] = None,
+    include_legend: bool = False,
 ) -> folium.Map:
     """
     Create a complete interactive map with all features.
@@ -251,6 +262,8 @@ def create_full_featured_map(
         Area in hectares.
     save_path : str or Path, optional
         If provided, saves the map to this path.
+    include_legend : bool, default=False
+        If False, legend is shown outside the map (in dashboard).
 
     Returns
     -------
@@ -262,7 +275,10 @@ def create_full_featured_map(
 
     # Add features
     m = add_layer_control(m)
-    m = create_ndvi_legend(m)
+
+    # Only include legend if specified (for standalone map files)
+    if include_legend:
+        m = create_ndvi_legend(m)
 
     # Save if path provided
     if save_path:

@@ -1,5 +1,5 @@
 """
-Streamlit dashboard for NDVI agricultural change analysis.
+Streamlit dashboard for Precision Agriculture NDVI Dashboard analysis.
 
 This is the main application that integrates all modules to create
 an interactive geospatial analysis dashboard.
@@ -10,8 +10,9 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 import streamlit as st
+from streamlit import components
+import folium
 
 from src.data_processing import load_ndvi_data
 from src.polygon_processing import (
@@ -21,29 +22,18 @@ from src.polygon_processing import (
     get_polygon_center,
 )
 from src.ndvi_analysis import (
-    smooth_series,
     identify_peaks,
     extract_annual_metrics,
-    classify_periods,
-    detect_seasonal_cycles,
-    get_period_statistics,
-    calculate_annual_change_rate,
 )
-from src.change_detection import (
-    detect_change_points,
-    estimate_deforestation_onset,
-    calculate_intensity_score,
-    classify_change_severity,
-)
-from src.map_generator import create_full_featured_map
+from src.map_generator import create_full_featured_map, get_color_for_ndvi
 
 
 # ==================== PAGE CONFIG ====================
 st.set_page_config(
-    page_title="NDVI Agricultural Change Analysis",
-    page_icon="🌍",
+    page_title="Precision Agriculture NDVI Analysis Dashboard ",
+    page_icon="🛰️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ==================== CUSTOM STYLING ====================
@@ -51,12 +41,6 @@ st.markdown("""
     <style>
     .main {
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
-    .metric-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -91,310 +75,288 @@ def main():
         st.error(f"Error processing polygon: {e}")
         return
 
-    # ==================== TITLE & HEADER ====================
-    st.markdown("# 🌍 NDVI Agricultural Change Analysis Dashboard")
-    st.markdown(
+    # Hidden controls with defaults
+    if 'show_peaks' not in st.session_state:
+        st.session_state.show_peaks = True
+
+    show_peaks = st.session_state.show_peaks
+
+    # ==================== LAYOUT: CENTER CONTENT ====================
+    col_left, col_center, col_right = st.columns([1, 2, 1])
+
+    with col_center:
+        # ==================== TITLE & HEADER ====================
+        st.markdown("# 🛰️ Precision Agriculture NDVI Analysis Dashboard")
+        st.markdown(
+            """
+            Os dados utilizados neste projeto foram obtidos diretamente do Sistema de Análise Temporal da Vegetação (SATVeg), desenvolvido pela Embrapa, por meio de sua API, usando da integração com o Brazil Data Cube – uma iniciativa do Instituto Nacional de Pesquisas Espaciais (INPE), dedicada à geração, organização e disponibilização de dados a partir de imagens de satélite para o território brasileiro. Essa conexão permite o acesso direto a séries temporais do satélite Sentinel-2, ampliando o potencial de análises ambientais, agropecuárias e de monitoramento territorial.
+
+            O NDVI (Índice de Vegetação por Diferença Normalizada) é uma forma simples e poderosa de medir a “saúde” da vegetação usando imagens de satélite. Ele funciona comparando a quantidade de luz que as plantas refletem: quanto mais verde e vigorosa a vegetação, maior será o valor do NDVI.
+
+            Neste projeto, analiso uma série histórica de mais de 20 anos para entender como a vegetação se comporta ao longo do tempo em uma área agrícola. A proposta não é apenas visualizar dados, mas revelar padrões que ajudam a interpretar o uso da terra e sua dinâmica ao longo dos anos.
+
+            A exploração começa pelo mapa interativo, onde é possível visualizar o NDVI em diferentes datas. Ao alternar entre períodos, o usuário consegue perceber como a vegetação responde ao clima — por exemplo, áreas mais verdes durante a estação chuvosa e redução da vegetação em períodos secos. Esse primeiro contato ajuda a construir uma intuição visual sobre o comportamento da área.
+            """
+        )
+
+        # ==================== GEOGRAPHIC LOCATION + AREA METRICS ====================
+        st.header("🗺️ Geographic Location")
+
+        # Legend below the map
+        st.markdown("""
+        **📊 NDVI classification legend**
+
+        <span style="background: #8B4513; width: 16px; height: 16px; display: inline-block; border: 1px solid #555; margin-right: 8px;"></span>
+        0.0–0.3: Low vegetation  
+
+        <span style="background: #CD853F; width: 16px; height: 16px; display: inline-block; border: 1px solid #555; margin-right: 8px;"></span>
+        0.3–0.5: Sparse vegetation  
+
+        <span style="background: #ADFF2F; width: 16px; height: 16px; display: inline-block; border: 1px solid #555; margin-right: 8px;"></span>
+        0.5–0.7: Moderate vegetation  
+
+        <span style="background: #32CD32; width: 16px; height: 16px; display: inline-block; border: 1px solid #555; margin-right: 8px;"></span>
+        0.7–0.85: High vegetation  
+
+        <span style="background: #006400; width: 16px; height: 16px; display: inline-block; border: 1px solid #555; margin-right: 8px;"></span>
+        0.85–1.0: Dense vegetation  
+
+        """, unsafe_allow_html=True)
+
+        # Date picker
+        date_range_min = ndvi_df["date"].min().date()
+        date_range_max = ndvi_df["date"].max().date()
+
+
+
+        selected_date_picker = st.date_input(
+            "**Select date to visualize NDVI on map:**",
+            value=date_range_max,
+            min_value=date_range_min,
+            max_value=date_range_max,
+            help="Choose a date to view NDVI on the map"
+        )
+
+        selected_date = pd.Timestamp(selected_date_picker)
+        idx = (ndvi_df['date'].dt.date - selected_date_picker).abs().argmin()
+        closest_date = ndvi_df.iloc[idx]["date"]
+        ndvi_at_date = ndvi_df.iloc[idx]["ndvi"]
+
+        # Create and display interactive map
+        center = get_polygon_center(gdf)
+        m = create_full_featured_map(
+            gdf,
+            center,
+            ndvi_at_date,
+            polygon_stats["area_ha"],
+        )
+
+        map_html = m._repr_html_()
+
+        # Process map HTML to make it fully responsive
+        map_html = map_html.replace('width: 100%;', 'width: 100%;')
+        map_html = map_html.replace('height: 500px;', 'height: 100%;')
+
+        MAP_HEIGHT = 500
+
+        # Perfectly centered vertical responsive map container
+        responsive_html = f"""
+        <div style="
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin: 20px auto;
+        ">
+            <div style="
+                width: 100%;
+                max-width: 800px;
+                height: {MAP_HEIGHT}px;
+                min-height: 600px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                overflow: hidden;
+            ">
+                {map_html}
+            </div>
+        </div>
         """
-        *Remote sensing interpretation | Geospatial data science | Earth observation*
+        components.v1.html(responsive_html, height=MAP_HEIGHT, scrolling=False)
 
-        This dashboard analyzes a **26-year (2000–2026) satellite time series** of NDVI (Normalized Difference Vegetation Index)
-        to detect land-use changes, agricultural intensification, and environmental trends in a Brazilian agricultural area.
-        """
-    )
 
-    # ==================== SIDEBAR CONTROLS ====================
-    with st.sidebar:
-        st.header("⚙️ Analysis Controls")
+        # ==================== NDVI TIME SERIES + CHANGE DETECTION (COMBINED) ====================
+        st.header("📈 NDVI Time Series Analysis for Land Use Detection")
 
-        smoothing_window = st.slider(
-            "NDVI Smoothing Window (observations)",
-            min_value=4,
-            max_value=64,
-            value=32,
-            step=4,
-            help="Larger windows produce smoother curves but may hide short-term variations.",
+        st.markdown(
+            """
+            É nessa visualização que surgem os principais insights, onde o comportamento da vegetação ao longo do tempo fica mais evidente:
+
+            * **Ciclos sazonais**: padrões de subida e descida do NDVI indicam períodos de crescimento e seca;
+            * **Picos de vegetação**: associados a momentos de maior vigor, como desenvolvimento de culturas ou recuperação de pastagem;
+            * **Quedas abruptas**: podem indicar colheita, seca intensa ou mudança no uso do solo;
+            * **Mudanças de padrão ao longo dos anos**: ajudam a identificar transições, como áreas que passaram de pastagem para agricultura.
+
+            Para interpretar corretamente, o ideal é observar:
+
+            * a **frequência dos picos** (uma ou mais safras por ano);
+            * a **intensidade dos valores máximos** (nível de produtividade/vigor);
+            * e o **comportamento nos períodos secos** (resiliência da vegetação).
+            """
         )
 
-        show_peaks = st.checkbox(
-            "Show NDVI Peaks", value=True,
-            help="Highlight local maxima in the time series."
+        # Year selector for zooming into specific year
+        years = sorted(ndvi_df["date"].dt.year.unique())
+        selected_year = st.selectbox(
+            "Year selection:",
+            options=[None] + years,
+            format_func=lambda x: "Full Series (2000–2026)" if x is None else str(int(x))
         )
 
-        show_analysis_details = st.checkbox(
-            "Show Detailed Analysis", value=False,
-            help="Display additional statistical details."
-        )
+        # Prepare data
+        ndvi_df_plot = ndvi_df.copy()
 
-    # ==================== KPI METRICS ====================
-    st.header("📊 Area Metrics")
-    col1, col2, col3, col4 = st.columns(4)
+        # Filter by year if selected
+        if selected_year:
+            year_mask = ndvi_df_plot["date"].dt.year == selected_year
+            ndvi_df_plot = ndvi_df_plot[year_mask]
 
-    with col1:
-        st.metric("Area", f"{polygon_stats['area_ha']:.2f} ha")
-    with col2:
-        st.metric("Mean NDVI", f"{polygon_stats['mean_ndvi']:.3f}")
-    with col3:
-        st.metric("Period", "2000 – 2026")
-    with col4:
-        st.metric("Observations", f"{len(ndvi_df):,}")
+        peaks_idx = identify_peaks(ndvi_df_plot["ndvi"], prominence=0.08)
 
-    # ==================== INTERACTIVE MAP ====================
-    st.header("🗺️ Geographic Location")
-    center = get_polygon_center(gdf)
-    m = create_full_featured_map(
-        gdf,
-        center,
-        polygon_stats["mean_ndvi"],
-        polygon_stats["area_ha"],
-    )
-    st.folium_static(m, width=1200, height=500)
+        # Create main figure
+        fig = go.Figure()
 
-    # ==================== NDVI TIME SERIES ====================
-    st.header("📈 NDVI Time Series Analysis")
-
-    # Prepare data for plotting
-    ndvi_df_plot = ndvi_df.copy()
-    ndvi_df_plot["smoothed"] = smooth_series(
-        ndvi_df_plot["ndvi"], window=smoothing_window
-    )
-
-    # Identify peaks
-    peaks_idx = identify_peaks(ndvi_df_plot["smoothed"], prominence=0.08)
-
-    # Create Plotly figure
-    fig = go.Figure()
-
-    # Raw NDVI
-    fig.add_trace(go.Scatter(
-        x=ndvi_df_plot["date"],
-        y=ndvi_df_plot["ndvi"],
-        mode="lines",
-        name="Raw NDVI",
-        line=dict(color="lightblue", width=1),
-        opacity=0.6,
-    ))
-
-    # Smoothed NDVI
-    fig.add_trace(go.Scatter(
-        x=ndvi_df_plot["date"],
-        y=ndvi_df_plot["smoothed"],
-        mode="lines",
-        name="Smoothed NDVI",
-        line=dict(color="darkblue", width=2),
-    ))
-
-    # Peaks
-    if show_peaks and len(peaks_idx) > 0:
-        fig.add_trace(go.Scatter(
-            x=ndvi_df_plot.iloc[peaks_idx]["date"],
-            y=ndvi_df_plot.iloc[peaks_idx]["smoothed"],
-            mode="markers",
-            name="Vegetation Peaks",
-            marker=dict(size=8, color="red", symbol="star"),
-        ))
-
-    # Styling
-    fig.update_layout(
-        title="NDVI Time Series (2000–2026)",
-        xaxis_title="Date",
-        yaxis_title="NDVI Value",
-        hovermode="x unified",
-        template="plotly_white",
-        height=500,
-        margin=dict(l=50, r=50, t=50, b=50),
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    # ==================== CHANGE DETECTION ====================
-    st.header("🔍 Change Point Detection")
-
-    try:
-        change_points = detect_change_points(
-            ndvi_df["ndvi"].values, n_breakpoints=3, algo="binseg"
-        )
-        deforestation_info = estimate_deforestation_onset(ndvi_df, change_points)
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            if deforestation_info:
-                st.metric(
-                    "Change Onset Year",
-                    deforestation_info["onset_year"]
-                )
-            else:
-                st.metric("Change Onset Year", "–")
-
-        with col2:
-            if deforestation_info:
-                magnitude = deforestation_info["magnitude"]
-                severity = classify_change_severity(magnitude)
-                st.metric("Change Severity", severity.title())
-            else:
-                st.metric("Change Severity", "–")
-
-        with col3:
-            intensity = calculate_intensity_score(ndvi_df)
-            st.metric("Intensification Score", f"{intensity:.2%}")
-
-        # Add vertical lines for change points in a new figure
-        if len(change_points) > 0:
-            fig_cp = go.Figure()
-
-            fig_cp.add_trace(go.Scatter(
-                x=ndvi_df["date"],
-                y=ndvi_df["ndvi"],
-                mode="lines",
-                name="NDVI",
-                line=dict(color="steelblue", width=2),
+        # Peaks
+        if show_peaks and len(peaks_idx) > 0:
+            fig.add_trace(go.Scatter(
+                x=ndvi_df_plot.iloc[peaks_idx]["date"],
+                y=ndvi_df_plot.iloc[peaks_idx]["ndvi"],
+                mode="markers",
+                name="Vegetation Peaks",
+                marker=dict(size=8, color="red", symbol="star"),
             ))
 
-            for idx, cp in enumerate(change_points):
-                if cp < len(ndvi_df):
-                    cp_date = ndvi_df.iloc[cp]["date"]
-                    fig_cp.add_vline(
-                        x=cp_date,
-                        line_dash="dash",
-                        line_color="red",
-                        annotation_text=f"Change {idx+1}" if idx == 0 else None,
-                    )
+        # Raw NDVI only
+        fig.add_trace(go.Scatter(
+            x=ndvi_df_plot["date"],
+            y=ndvi_df_plot["ndvi"],
+            mode="lines",
+            name="NDVI",
+            line=dict(color="steelblue", width=2),
+        ))
 
-            fig_cp.update_layout(
-                title="Change Points Detected",
-                xaxis_title="Date",
-                yaxis_title="NDVI Value",
-                hovermode="x unified",
-                template="plotly_white",
-                height=400,
-            )
+        # Add year boundary markers (only for full series)
+        shapes = []
+        change_points = []  # Initialize change_points for metrics calculation
+        if not selected_year:
+            # Show red dashed lines at year boundaries for full temporal range
+            years_in_range = sorted(ndvi_df["date"].dt.year.unique())
+            for year in years_in_range[1:]:  # Skip first year, show from 2nd year onwards
+                year_start = pd.Timestamp(year=year, month=1, day=1)
+                if year_start >= ndvi_df["date"].min() and year_start <= ndvi_df["date"].max():
+                    shapes.append(dict(
+                        type="line",
+                        x0=year_start,
+                        x1=year_start,
+                        y0=0,
+                        y1=1,
+                        yref="paper",
+                        line=dict(color="red", width=1.5, dash="dash"),
+                    ))
 
-            st.plotly_chart(fig_cp, use_container_width=True)
+        # Dynamic height based on year selection (taller for zoomed view)
+        chart_height = 700 if selected_year else 500
 
-    except ImportError:
-        st.warning("Change detection requires ruptures package. Install with: pip install ruptures")
+        fig.update_layout(
+            xaxis_title="Date",
+            yaxis_title="NDVI Value",
+            hovermode="x unified",
+            template="plotly_white",
+            height=chart_height,
+            shapes=shapes,
+            legend=dict(orientation="v", yanchor="top", y=1.2, xanchor="left", x=0),
+        )
 
-    # ==================== PERIODIC ANALYSIS ====================
-    st.header("📅 Temporal Period Classification")
+        st.plotly_chart(fig, use_container_width=True)
 
-    # Classify periods
-    ndvi_df_periods = classify_periods(ndvi_df)
-    period_stats = get_period_statistics(ndvi_df)
+        # Calculate change detection metrics for internal use (not displayed)
+        try:
+            if change_points:
+                deforestation_info = estimate_deforestation_onset(ndvi_df, change_points)
+                intensity = calculate_intensity_score(ndvi_df)
+        except ImportError:
+            pass
 
-    # Display period statistics
-    period_cols = st.columns(len(period_stats))
-    for col, (period_name, stats) in zip(period_cols, period_stats.items()):
-        with col:
-            st.markdown(f"### {period_name}")
-            st.metric("Mean NDVI", f"{stats['mean']:.3f}")
-            st.metric("Max NDVI", f"{stats['max']:.3f}")
-            st.metric("Min NDVI", f"{stats['min']:.3f}")
+        # ==================== ANNUAL METRICS ====================
+        st.header("📋 Annual NDVI Trends (2000–2026)")
 
-    # ==================== ANNUAL METRICS ====================
-    st.header("📋 Annual Metrics")
+        st.markdown(
+            """
+            Por fim, a seção de métricas anuais resume essas informações, permitindo comparar anos diferentes e entender se a área está estável, se houve intensificação do uso agrícola ou possíveis sinais de degradação.
 
-    annual_df = extract_annual_metrics(ndvi_df)
+            Esse tipo de análise é extremamente útil para a agricultura, pois permite:
 
-    # Annual trend chart
-    fig_annual = go.Figure()
+            * monitorar a saúde das lavouras e pastagens;
+            * identificar períodos ideais de plantio e colheita;
+            * detectar sinais de estresse hídrico;
+            * acompanhar a produtividade ao longo do tempo.
+            """
+        )
 
-    fig_annual.add_trace(go.Scatter(
-        x=annual_df["year"],
-        y=annual_df["mean_ndvi"],
-        mode="lines+markers",
-        name="Mean NDVI",
-        line=dict(color="darkgreen", width=3),
-        marker=dict(size=6),
-    ))
+        annual_df = extract_annual_metrics(ndvi_df)
 
-    fig_annual.add_trace(go.Scatter(
-        x=annual_df["year"],
-        y=annual_df["max_ndvi"],
-        mode="lines",
-        name="Max NDVI",
-        line=dict(color="lightgreen", width=1, dash="dash"),
-    ))
+        # Annual trend chart
+        fig_annual = go.Figure()
 
-    fig_annual.add_trace(go.Scatter(
-        x=annual_df["year"],
-        y=annual_df["min_ndvi"],
-        mode="lines",
-        name="Min NDVI",
-        line=dict(color="brown", width=1, dash="dash"),
-    ))
+        fig_annual.add_trace(go.Scatter(
+            x=annual_df["year"],
+            y=annual_df["max_ndvi"],
+            mode="lines",
+            name="Max NDVI",
+            line=dict(color="lightgreen", width=1, dash="dash"),
+        ))
 
-    fig_annual.update_layout(
-        title="Annual NDVI Trends",
-        xaxis_title="Year",
-        yaxis_title="NDVI Value",
-        template="plotly_white",
-        height=400,
-    )
+        fig_annual.add_trace(go.Scatter(
+            x=annual_df["year"],
+            y=annual_df["mean_ndvi"],
+            mode="lines+markers",
+            name="Mean NDVI",
+            line=dict(color="darkgreen", width=3),
+            marker=dict(size=8),
+            fill="tozeroy",
+            fillcolor="rgba(0,100,0,0.2)",
+        ))
 
-    st.plotly_chart(fig_annual, use_container_width=True)
+        fig_annual.add_trace(go.Scatter(
+            x=annual_df["year"],
+            y=annual_df["min_ndvi"],
+            mode="lines",
+            name="Min NDVI",
+            line=dict(color="brown", width=1, dash="dash"),
+        ))
 
-    # Display annual metrics table
-    st.dataframe(
-        annual_df,
-        use_container_width=True,
-        hide_index=True,
-    )
+        fig_annual.update_layout(
+            xaxis_title="Year",
+            yaxis_title="NDVI Value",
+            template="plotly_white",
+            height=400,
+            legend=dict(orientation="v", yanchor="top", y=1.3, xanchor="left", x=0),
+        )
 
-    # ==================== SEASONAL ANALYSIS ====================
-    st.header("🌾 Seasonal Cycle Analysis")
+        st.plotly_chart(fig_annual, use_container_width=True)
 
-    cycle_analysis = detect_seasonal_cycles(ndvi_df)
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Cycles/Year", f"{cycle_analysis['cycles_per_year']:.2f}")
-    with col2:
-        st.metric("Cycle Duration", f"{cycle_analysis['cycle_duration_days']:.0f} days")
-    with col3:
-        st.metric("Crop Type Inferred", cycle_analysis['crop_type_inferred'].title())
-
-    st.info(
-        f"""
-        **Interpretation:** The detected pattern suggests **{cycle_analysis['crop_type_inferred']}** agriculture.
-        - **Single crop**: 0.5–1.5 cycles/year (annual harvest)
-        - **Double crop**: 1.5–2.5 cycles/year (multiple harvests)
-        - **Pasture**: <0.5 cycles/year (continuous grazing)
-        - **Perennial**: >2.5 cycles/year (constant cultivation)
-        """
-    )
-
-    # ==================== DETAILED ANALYSIS ====================
-    if show_analysis_details:
-        st.header("📊 Detailed Statistical Summary")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("Data Overview")
-            st.write(f"**Total Observations:** {len(ndvi_df):,}")
-            st.write(f"**Date Range:** {ndvi_df['date'].min().date()} to {ndvi_df['date'].max().date()}")
-            st.write(f"**Time Span:** {(ndvi_df['date'].max() - ndvi_df['date'].min()).days} days (~{(ndvi_df['date'].max() - ndvi_df['date'].min()).days / 365.25:.1f} years)")
-            st.write(f"**Mean Interval:** ~{(ndvi_df['date'].diff().dt.days.mean()):.0f} days")
-
-        with col2:
-            st.subheader("NDVI Statistics")
-            st.write(f"**Mean:** {ndvi_df['ndvi'].mean():.4f}")
-            st.write(f"**Std Dev:** {ndvi_df['ndvi'].std():.4f}")
-            st.write(f"**Min:** {ndvi_df['ndvi'].min():.4f}")
-            st.write(f"**Max:** {ndvi_df['ndvi'].max():.4f}")
-            st.write(f"**Annual Change Rate:** {calculate_annual_change_rate(annual_df):.4f}")
-
-    # ==================== FOOTER ====================
-    st.divider()
-    st.markdown(
-        """
-        ---
-        **Data Source:** MODIS NDVI (SATVeg API - EmbrapaAgricultural Informatics)
-        **Resolution:** 250m spatial × 8–16 day temporal
-        **Project:** NDVI Agricultural Change Analysis Dashboard
-        **Terms:** Remote sensing interpretation | Geospatial data science | Earth observation
-        """
-    )
+        # ==================== FOOTER ====================
+        st.divider()
+        st.markdown(
+            """
+            <div style="text-align: center; font-size: 14px; line-height: 1.6;">
+                <strong>Project Creator:</strong> Matheus Bissoli <br>
+                🌐 <a href="https://matheusflb.github.io/" target="_blank">Personal Site</a>
+                💼 <a href="https://www.linkedin.com/in/matheusbissoli/" target="_blank">LinkedIn</a> &nbsp;|&nbsp;
+                💻 <a href="https://github.com/MatheusFLB" target="_blank">GitHub</a> &nbsp;|&nbsp;
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 
 if __name__ == "__main__":

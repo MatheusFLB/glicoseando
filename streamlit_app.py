@@ -111,7 +111,7 @@ with col_lang_right:
     selected_lang = st.selectbox(
         "Language / Idioma:",
         options=["en", "pt"],
-        format_func=lambda x: "🇺🇸 English" if x == "en" else "🇧🇷 Portugues",
+        format_func=lambda x: "🌎 English" if x == "en" else "🇧🇷 Portugues",
         key="lang_selector"
     )
     st.session_state.language = selected_lang

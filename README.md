@@ -1,311 +1,293 @@
-# ndvi-agriculture-change-analysis
+# 🛰️ Glicoseando - Dashboard de Análise NDVI em Agricultura de Precisão
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Streamlit App](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B.svg)](https://streamlit.io/)
 
-> **Remote sensing interpretation | Geospatial data science | Earth observation**
+> **Análise Geoespacial | Sensoriamento Remoto | Observação da Terra**
 
-A comprehensive **geospatial analysis dashboard** for detecting land-use changes, agricultural intensification, and environmental trends using 26 years of NDVI satellite data (2000–2026).
-
----
-
-## 🎯 Overview
-
-This project analyzes a time series of **NDVI (Normalized Difference Vegetation Index)** data from an agricultural area in Brazil using satellite imagery from NASA's MODIS sensor. The dashboard detects:
-
-- ✅ **Deforestation and pasture-to-crop conversions**
-- ✅ **Seasonal agricultural cycles** (single-crop, double-crop, etc.)
-- ✅ **Agricultural intensification trends**
-- ✅ **Temporal changes in vegetation dynamics**
-- ✅ **Land-use classification periods** (2000–2002, 2003–2010, 2010–2026)
-
-### Key Features
-
-| Feature | Description |
-|---------|-------------|
-| 🗺️ **Interactive Map** | Folium-based visualization with polygon overlay and KPI metrics |
-| 📈 **Time Series Analysis** | Raw + smoothed NDVI with peak detection and trend analysis |
-| 🔍 **Change Detection** | Binary segmentation algorithm to identify structural breaks |
-| 🌾 **Crop Classification** | Infers crop type (single, double, pasture, perennial) from seasonal patterns |
-| 📊 **Annual Metrics** | Mean, max, min NDVI per year with trend visualization |
-| 📅 **Temporal Classification** | Automated period classification reflecting agricultural evolution |
-| ⚡ **Interactive Dashboard** | Streamlit web app with real-time analysis controls |
+Um dashboard geoespacial interativo para **análise de séries temporais NDVI** (26 anos: 2000–2026) com visualizações de dinâmica vegetativa e detecção de padrões sazonais.
 
 ---
 
-## 📊 Data Source
+## 🎯 Visão Geral
 
-**MODIS NDVI data via AgroAPI (SATVeg)**
+Este projeto analisa uma **série temporal de NDVI** de uma área agrícola no Brasil usando dados de satélite MODIS/Sentinel-2 da API SATVeg (Embrapa). O dashboard detecta:
 
-- **Satellite:** MODIS (Terra/Aqua)
-- **Resolution:** 250m spatial × 8–16 day temporal
-- **Period:** 2000–02-18 to 2026–02-10 (1,142 observations)
-- **Provider:** Embrapa Informática Agropecuária (SATVeg - Sistema de Análise Temporal da Vegetação)
+- ✅ **Padrões Sazonais**: Ciclos de crescimento e dormência da vegetação
+- ✅ **Picos de Vegetação**: Momentos de máximo vigor em cada ciclo
+- ✅ **Tendências Anuais**: Evolução do NDVI ao longo de 26 anos
+- ✅ **Análise Interativa**: Zoom em períodos específicos para investigação detalhada
+- ✅ **Visualizações Dinâmicas**: Mapa colorido, gráficos Plotly responsivos
 
-**Study Area:**
-- Location: Brazil (latitude ~-13.5°, longitude ~-58.9°)
-- Area: ~250 hectares (calculated from polygon)
-- Coordinates: Polygon with 20 vertices
+### ⚡ Funcionalidades Principais
+
+| Recurso | Descrição |
+|---------|-----------|
+| 🗺️ **Mapa Interativo** | Visualização Folium com seletor de data e overlay de polígono colorido por NDVI |
+| 📈 **Série Temporal** | Linha de tendência com detecção automática de picos de vegetação |
+| 🔍 **Zoom por Ano** | Filtro interativo para examinar períodos específicos em detalhe |
+| 📊 **Métricas Anuais** | Gráfico de tendências mostrando min/média/max NDVI por ano |
+| 🌍 **Dual-Language** | Interface em Português (PT) e Inglês (EN) |
+| 💾 **Código Comentado** | 370+ linhas de comentários explicativos para fácil compreensão |
 
 ---
 
-## 🚀 Getting Started
+## 📊 Fonte de Dados
 
-### Prerequisites
+**NDVI via API SATVeg (Embrapa)**
+
+- **Satélites**: MODIS (Terra/Aqua) + Sentinel-2
+- **Resolução**: 250m espacial × 8–16 dias temporal
+- **Período**: 2000-02-18 a 2026-02-10 (1,142+ observações)
+- **Fornecedor**: Embrapa Informática Agropecuária - SATVeg
+- **Integração**: Brazil Data Cube (INPE)
+
+**Área de Estudo**:
+- **Localização**: Brasil (~-13.5°, ~-58.9°)
+- **Área**: ~250 hectares
+- **Coordenadas**: Polígono com múltiplos vértices
+
+---
+
+## 🚀 Início Rápido
+
+### Pré-requisitos
 
 - **Python 3.9+**
-- **pip** or **conda** for package management
+- **pip** ou **conda** para gerenciar pacotes
 
-### Installation
+### Instalação
 
-1. **Clone the repository:**
+1. **Clone o repositório:**
 
 ```bash
 git clone https://github.com/yourusername/glicoseando.git
 cd glicoseando
 ```
 
-2. **Create a virtual environment (recommended):**
+2. **Crie um ambiente virtual (recomendado):**
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # No Windows: venv\Scripts\activate
 ```
 
-3. **Install dependencies:**
+3. **Instale as dependências:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Running the Dashboard
+### Executar o Dashboard
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
-The application will open at `http://localhost:8501`
+A aplicação abrirá em `http://localhost:8501`
 
 ---
 
-## 📁 Project Structure
+## 📁 Estrutura do Projeto
 
 ```
 glicoseando/
 ├── data/
-│   ├── ndvi_request.json         # API request parameters
-│   └── ndvi_timeseries.json      # NDVI time series data (1,144 observations)
+│   ├── ndvi_request.json         # Parâmetros da requisição da API
+│   └── ndvi_timeseries.json      # Série temporal de NDVI (1,144 observações)
 │
 ├── src/
-│   ├── __init__.py               # Package initialization
-│   ├── data_processing.py        # Load & clean NDVI data
-│   ├── polygon_processing.py     # Polygon geometry & area calculations
-│   ├── ndvi_analysis.py          # Temporal analysis & metrics
-│   ├── change_detection.py       # Change point detection (ruptures)
-│   └── map_generator.py          # Folium interactive maps
+│   ├── __init__.py               # Inicialização do package
+│   ├── data_processing.py        # Carregamento e limpeza de dados NDVI
+│   ├── polygon_processing.py     # Processamento geométrico e cálculo de área
+│   ├── ndvi_analysis.py          # Análise temporal e detecção de picos
+│   └── map_generator.py          # Geração de mapas interativos com Folium
 │
-├── outputs/
-│   ├── figures/                  # Exported charts
-│   └── maps/                     # Exported interactive maps (HTML)
+├── streamlit_app.py              # Aplicação principal do dashboard
+├── requirements.txt              # Dependências Python
 │
-├── streamlit_app.py              # Main dashboard application
-├── requirements.txt              # Python dependencies
-├── .gitignore                    # Git ignore rules
-└── README.md                     # This file
+├── DOCUMENTAÇÃO/
+│   ├── START_HERE.md             # **Comece aqui!**
+│   ├── QUICK_REFERENCE.md        # Guia prático rápido
+│   ├── ARCHITECTURE.md           # Detalhes técnicos profundos
+│   ├── CODE_COMMENTS_GUIDE.md    # Estratégia de comentários
+│   ├── DOCUMENTATION_INDEX.md    # Índice de documentação
+│   └── REVISION_SUMMARY.md       # Resumo de revisão
+│
+└── README.md                     # Este arquivo
 ```
 
 ---
 
-## 🔧 Module Description
+## 🔧 Descrição dos Módulos
 
-### 1. `data_processing.py`
+### 1. `src/data_processing.py`
 
-Handles loading and validating NDVI time series data from JSON format.
+Carregamento e validação de dados NDVI em formato JSON.
 
-**Key Functions:**
-- `load_ndvi_data()` - Parse JSON, create DataFrame, validate structure
-- `clean_ndvi_data()` - Remove outliers and NaN values
-- `get_data_summary()` - Generate descriptive statistics
+**Funções Principais:**
+- `load_ndvi_data()` - Carrega JSON e cria DataFrame estruturado
+- `clean_ndvi_data()` - Remove valores inválidos (fora de [-1, 1])
+- `get_data_summary()` - Gera estatísticas descritivas
 
-### 2. `polygon_processing.py`
-
-Manages geospatial polygon operations using GeoPandas and Shapely.
-
-**Key Functions:**
-- `parse_polygon_string()` - Convert API coordinates to tuples
-- `create_geodataframe()` - Create GeoDataFrame from coordinates
-- `calculate_area_hectares()` - Reproject to equal-area (EPSG:6933) and calculate
-- `get_polygon_stats()` - Generate comprehensive polygon statistics
-
-### 3. `ndvi_analysis.py`
-
-Temporal analysis module for extracting seasonal patterns and trends.
-
-**Key Functions:**
-- `smooth_series()` - Rolling window or Savitzky-Golay filtering
-- `identify_peaks()` - Detect vegetation peaks using scipy
-- `extract_annual_metrics()` - Group by year, compute statistics
-- `detect_seasonal_cycles()` - Infer crop type from cycle frequency
-- `classify_periods()` - Categorize into 3 temporal periods
-- `get_period_statistics()` - Per-period NDVI summaries
-
-### 4. `change_detection.py`
-
-Detects structural changes and estimates deforestation onset.
-
-**Key Functions:**
-- `detect_change_points()` - Binary segmentation (ruptures library)
-- `estimate_deforestation_onset()` - Identify first major change
-- `calculate_intensity_score()` - Compute agricultural intensification (0–1)
-- `classify_change_severity()` - Rank changes as severe/moderate/minor
-
-### 5. `map_generator.py`
-
-Creates interactive visualizations using Folium.
-
-**Key Functions:**
-- `create_interactive_map()` - Generate Folium map with polygon
-- `get_color_for_ndvi()` - NDVI-to-color mapping (brown → green)
-- `create_ndvi_legend()` - Add color scale legend
-- `create_full_featured_map()` - All-in-one map generation
-
-### 6. `streamlit_app.py`
-
-Main dashboard integrating all modules with interactive controls.
-
-**Sections:**
-- **KPI Metrics:** Area, mean NDVI, observation count
-- **Geographic Map:** Folium visualization with polygon
-- **Time Series:** Raw + smoothed NDVI with peak detection
-- **Change Detection:** Breakpoints and deforestation onset
-- **Period Classification:** Statistics by temporal period
-- **Annual Trends:** Year-over-year NDVI evolution
-- **Seasonal Analysis:** Crop type inference and cycle metrics
-- **Detailed Stats:** Optional extended analysis
+**Exemplo:**
+```python
+from src.data_processing import load_ndvi_data, get_data_summary
+df = load_ndvi_data("data/ndvi_timeseries.json")
+stats = get_data_summary(df)
+print(f"NDVI Médio: {stats['mean_ndvi']:.3f}")
+```
 
 ---
 
-## 📊 Analysis Workflow
+### 2. `src/polygon_processing.py`
 
-### 1. Data Loading
+Operações geométricas com polígonos usando GeoPandas e Shapely.
+
+**Funções Principais:**
+- `parse_polygon_string()` - Converte string de coordenadas em tuplas
+- `create_geodataframe()` - Cria estrutura geométrica (GeoDataFrame)
+- `calculate_area_hectares()` - Calcula área usando EPSG:6933 (igual-área)
+- `get_polygon_stats()` - Compila estatísticas do polígono
+
+**Nota Técnica:**
+- Entrada: WGS84 (EPSG:4326)
+- Cálculo de Área: EPSG:6933 (South America Equidistant)
+- Saída: Dados estruturados com geometria validada
+
+---
+
+### 3. `src/ndvi_analysis.py`
+
+Análise temporal de séries NDVI com detecção de padrões.
+
+**Funções Principais:**
+- `identify_peaks()` - Detecta máximos locais (picos de vegetação) com scipy
+- `extract_annual_metrics()` - Calcula min/média/max NDVI por ano
+
+**Parâmetro Crítico:**
+```python
+# Proeminência = altura do pico acima do vale adjacente
+identify_peaks(series, prominence=0.08)
+# 0.08 = muito seletivo (padrão)
+# 0.05 = mais sensível (mais picos)
+# 0.15 = muito seletivo (menos picos)
+```
+
+---
+
+### 4. `src/map_generator.py`
+
+Criação de visualizações cartográficas interativas com Folium.
+
+**Funções Principais:**
+- `get_color_for_ndvi()` - Mapeia NDVI para cor em 5 escalas
+- `create_interactive_map()` - Gera mapa base com polígono
+- `create_full_featured_map()` - Mapa completo com todos recursos
+
+**Escala de Cores NDVI:**
+```
+0.0-0.3:   #8B4513  Marrom escuro (vegetação muito baixa)
+0.3-0.5:   #CD853F  Marrom claro (esparsa)
+0.5-0.7:   #ADFF2F  Amarelo-verde (moderada)
+0.7-0.85:  #32CD32  Verde claro (alta)
+0.85-1.0:  #006400  Verde escuro (densa)
+```
+
+---
+
+### 5. `streamlit_app.py`
+
+Aplicação principal que orquestra todos os módulos.
+
+**Seções do Dashboard:**
+- Seletor de Idioma (PT/EN)
+- Mapa Interativo com Seletor de Data
+- Série Temporal com Detecção de Picos
+- Gráfico de Tendências Anuais
+- Rodapé com Informações do Criador
+
+**Caching:**
+```python
+@st.cache_resource
+def load_all_data():
+    # Dados carregados uma vez e reutilizados
+    # Melhora desempenho significativamente
+```
+
+---
+
+## 🧪 Exemplos de Uso
+
+### Carregar e Processar Dados
+
 ```python
 from src.data_processing import load_ndvi_data
+from src.polygon_processing import parse_polygon_string, create_geodataframe
+
+# Carregar dados
 df = load_ndvi_data("data/ndvi_timeseries.json")
-# Returns: DataFrame with 'date' and 'ndvi' columns
-```
 
-### 2. Polygon Processing
-```python
-from src.polygon_processing import (
-    parse_polygon_string, create_geodataframe, calculate_area_hectares
-)
-coords = parse_polygon_string(request_data["poligono"])
+# Processar polígono
+coords = parse_polygon_string("-58.914 -13.507,-58.865 -13.513,...")
 gdf = create_geodataframe(coords)
-area_ha = calculate_area_hectares(gdf)
 ```
 
-### 3. Temporal Analysis
+### Análise Temporal
+
 ```python
-from src.ndvi_analysis import extract_annual_metrics, detect_seasonal_cycles
-annual_df = extract_annual_metrics(df)
-cycles = detect_seasonal_cycles(df)
+from src.ndvi_analysis import identify_peaks, extract_annual_metrics
+
+# Detectar picos
+peaks = identify_peaks(df["ndvi"].values)
+print(f"Picos detectados: {len(peaks)}")
+
+# Métricas por ano
+annual = extract_annual_metrics(df)
+print(annual)
 ```
 
-### 4. Change Detection
-```python
-from src.change_detection import detect_change_points, estimate_deforestation_onset
-change_points = detect_change_points(df["ndvi"].values)
-deforestation = estimate_deforestation_onset(df, change_points)
-```
+### Criar Mapa
 
-### 5. Visualization
 ```python
 from src.map_generator import create_full_featured_map
-m = create_full_featured_map(gdf, center, mean_ndvi, area_ha)
-m.save("outputs/maps/analysis_map.html")
+
+# Gerar mapa
+mapa = create_full_featured_map(gdf, center, mean_ndvi=0.65, area_ha=250)
+mapa.save('analise.html')
 ```
 
 ---
 
-## 🧪 Testing & Validation
+## 📚 Documentação Completa
 
-Quick validation tests:
+**Comece por aqui:** [`START_HERE.md`](START_HERE.md)
 
-```python
-# Data integrity
-df = load_ndvi_data("data/ndvi_timeseries.json")
-assert len(df) == 1144
-assert df["date"].min() == pd.Timestamp("2000-02-18")
-
-# Polygon geometry
-gdf = create_geodataframe(coords)
-area = calculate_area_hectares(gdf)
-assert 100 < area < 1000  # Reasonable area range
-
-# Change detection
-change_pts = detect_change_points(df["ndvi"].values)
-assert 1 <= len(change_pts) <= 5  # Expect 1–5 breakpoints
-
-# Analysis completeness
-annual = extract_annual_metrics(df)
-assert len(annual) == 26  # 26 years
-assert annual["mean_ndvi"].notna().all()
-```
+| Documento | Propósito | Tempo |
+|-----------|-----------|-------|
+| [`START_HERE.md`](START_HERE.md) | Guia inicial rápido | 5 min |
+| [`QUICK_REFERENCE.md`](QUICK_REFERENCE.md) | Referência prática | 15 min |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Detalhes técnicos | 60 min |
+| [`CODE_COMMENTS_GUIDE.md`](CODE_COMMENTS_GUIDE.md) | Padrão de comentários | 20 min |
+| [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Índice completo | Consulta |
 
 ---
 
-## 📌 Key Findings & Interpretations
+## 🛠️ Stack Tecnológico
 
-### Temporal Periods
-
-**Period 1 (2000–2002): Transition**
-- Irregular NDVI patterns
-- Possible pastage-to-crop conversion
-- Mean NDVI ~0.40–0.50
-
-**Period 2 (2003–2010): Established Agriculture**
-- Regular seasonal cycles
-- Mean NDVI ~0.55–0.65
-- Clear crop peaks and dormant phases
-
-**Period 3 (2010–2026): Intensive Agriculture**
-- High and frequent NDVI peaks (>0.85)
-- Possible double-cropping system
-- Mean NDVI ~0.70–0.75
-- Consistent high productivity
-
-### Seasonal Patterns
-
-- **Cycles/Year:** Indicates single-crop, double-crop, or pasture systems
-- **Cycle Duration:** Typical agricultural cycle ~6–8 months for single crops
-- **Amplitude:** Range between dormant and peak vegetation
-
-### Change Severity Levels
-
-- **Severe (`> 0.15`):** Major vegetation loss (deforestation, abandonment)
-- **Moderate (`0.05–0.15`):** Significant shift (land conversion)
-- **Minor (`< 0.05`):** Subtle variation (management changes)
-- **Gain (`> 0`):** NDVI increase (reforestation, intensification)
+| Componente | Tecnologia | Propósito |
+|------------|-----------|----------|
+| **Dados** | Pandas, NumPy | Manipulação de séries temporais |
+| **Geoespacial** | GeoPandas, Shapely | Processamento de polígonos |
+| **Análise** | SciPy | Detecção de picos |
+| **Visualização** | Plotly, Folium | Gráficos e mapas interativos |
+| **Dashboard** | Streamlit | Interface web |
+| **Linguagem** | Python 3.9+ | Implementação |
 
 ---
 
-## 🛠️ Technology Stack
-
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Data Processing** | Pandas, NumPy | Time series manipulation |
-| **Geospatial** | GeoPandas, Shapely | Polygon operations |
-| **Analysis** | SciPy, ruptures | Temporal analysis, change detection |
-| **Visualization** | Plotly, Folium | Interactive charts and maps |
-| **Dashboard** | Streamlit | Web application interface |
-| **Language** | Python 3.9+ | Core implementation |
-
----
-
-## 📦 Dependencies
-
-See `requirements.txt`:
+## 📦 Dependências
 
 ```
 pandas>=1.5.0
@@ -314,29 +296,33 @@ geopandas>=0.12.0
 shapely>=2.0.0
 folium>=0.14.0
 plotly>=5.14.0
-ruptures>=1.1.8
 streamlit>=1.28.0
-pyproj>=3.5.0
 scipy>=1.10.0
+pyproj>=3.5.0
 ```
 
 ---
 
 ## 🌐 Deployment
 
-### Local Development
+### Desenvolvimento Local
+
 ```bash
 streamlit run streamlit_app.py
 ```
 
 ### Streamlit Cloud
+
 ```bash
-# Requires GitHub repository
-# Visit: https://share.streamlit.io/
-# Connect repo and deploy
+# 1. Push para GitHub
+git push origin main
+
+# 2. Visite: https://share.streamlit.io/
+# 3. Conecte repositório e deploy
 ```
 
-### Docker (Optional)
+### Docker (Opcional)
+
 ```dockerfile
 FROM python:3.9-slim
 WORKDIR /app
@@ -348,51 +334,55 @@ CMD ["streamlit", "run", "streamlit_app.py"]
 
 ---
 
-## 📖 References
+## 📖 Referências
 
-- **SATVeg System:** [Sistema de Análise Temporal da Vegetação](https://www.sativeg.cnptia.embrapa.br/)
-- **AgroAPI:** Embrapa APIs for agricultural data
-- **MODIS:** [NASA MODIS Instrument](https://modis.gsfc.nasa.gov/)
-- **NDVI:** [Normalized Difference Vegetation Index](https://en.wikipedia.org/wiki/Normalized_difference_vegetation_index)
-- **Ruptures:** [Time Series Change Point Detection](https://github.com/deepcharles/ruptures)
-
----
-
-## 📝 License
-
-This project is licensed under the **MIT License** — see LICENSE file for details.
+- **SATVeg System**: [Sistema de Análise Temporal da Vegetação](https://www.sativeg.cnptia.embrapa.br/)
+- **Brazil Data Cube**: [INPE - Cubo Brasil](http://www.brazildatacube.org/)
+- **NDVI**: [Normalized Difference Vegetation Index (Wikipedia)](https://en.wikipedia.org/wiki/Normalized_difference_vegetation_index)
+- **MODIS**: [NASA MODIS Instrument](https://modis.gsfc.nasa.gov/)
+- **GeoPandas**: [GeoPandas Documentation](https://geopandas.org/)
+- **Streamlit**: [Streamlit Documentation](https://docs.streamlit.io/)
 
 ---
 
-## 👨‍💻 Author
+## 📝 Licença
 
-**Data Science & Geospatial Analysis Team**
-
-- Remote sensing interpretation
-- Geospatial data science
-- Agricultural monitoring
+Este projeto está licenciado sob a **Licença MIT** — veja o arquivo LICENSE para detalhes.
 
 ---
 
-## 🤝 Contributing
+## 👨‍💻 Autor
 
-Contributions are welcome! To contribute:
+**Matheus Bissoli**
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Análise geoespacial | Sensoriamento remoto | Agricultura de precisão
 
----
-
-## 📧 Support
-
-For questions or issues:
-- Open an issue on GitHub
-- Contact: [your-email@example.com]
+- 🌐 [Site Pessoal](https://matheusflb.github.io/)
+- 💼 [LinkedIn](https://www.linkedin.com/in/matheusbissoli/)
+- 💻 [GitHub](https://github.com/MatheusFLB)
 
 ---
 
-**Keywords:** `ndvi` | `agriculture` | `change-analysis` | `remote-sensing` | `geospatial` | `earth-observation` | `satellite-data` | `streamlit` | `geopython`
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Para contribuir:
+
+1. Fork o repositório
+2. Crie uma branch de feature (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+---
+
+## 📞 Suporte
+
+Para dúvidas ou problemas:
+- Abra uma issue no GitHub
+- Consulte a [documentação completa](DOCUMENTATION_INDEX.md)
+- Comece por [`START_HERE.md`](START_HERE.md)
+
+---
+
+**Keywords:** `ndvi` | `agriculture` | `remote-sensing` | `geospatial` | `earth-observation` | `satellite-data` | `streamlit` | `geopython` | `precision-agriculture`
 

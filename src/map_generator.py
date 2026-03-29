@@ -1,8 +1,19 @@
 """
-Map generation module for interactive geospatial visualization.
+MÓDULO DE GERAÇÃO DE MAPAS INTERATIVOS
 
-This module creates interactive maps using Folium to visualize
-polygon geometry and NDVI statistics.
+Responsável por criar visualizações cartográficas usando Folium:
+- Mapas interativos com polígonos coloridos
+- Coloração baseada em valores NDVI
+- Adição de legendas e controles
+- Marcadores e popups informativos
+
+COLORIZAÇÃO POR NDVI:
+A cor representa a saúde da vegetação:
+- Marrom escuro (0.0-0.3): Vegetação muito baixa ou nenhuma
+- Marrom claro (0.3-0.5): Vegetação esparsa
+- Amarelo-verde (0.5-0.7): Vegetação moderada
+- Verde claro (0.7-0.85): Vegetação alta
+- Verde escuro (0.85-1.0): Vegetação densa (máximo vigor)
 """
 
 from typing import Tuple
@@ -12,41 +23,57 @@ import geopandas as gpd
 import numpy as np
 
 
+# ==================== MAPEAMENTO DE CORES ====================
 def get_color_for_ndvi(ndvi_value: float) -> str:
     """
-    Get a color representing NDVI value on a green to brown scale.
+    Mapeia um valor NDVI para uma cor em escala verde-marrom.
+
+    Utiliza uma escala de 5 cores para representar diferentes níveis
+    de vigor vegetativo, indo de marrom (baixa vegetação) a verde escuro (alta vegetação).
 
     Parameters
     ----------
     ndvi_value : float
-        NDVI value (typically 0 to 1, but can be outside range).
+        Valor NDVI (normalmente 0 a 1, mas pode estar fora desse intervalo).
 
     Returns
     -------
     str
-        Hex color code.
+        Código hexadecimal da cor (ex: "#8B4513", "#006400").
+
+    Example
+    -------
+    >>> color_low = get_color_for_ndvi(0.2)
+    >>> print(color_low)
+    #8B4513
+    >>> color_high = get_color_for_ndvi(0.9)
+    >>> print(color_high)
+    #006400
     """
-    # Clamp NDVI to [0, 1]
+    # Limita o valor NDVI ao intervalo [0, 1]
+    # (alguns valores podem estar ligeiramente fora do intervalo)
     ndvi = np.clip(ndvi_value, 0, 1)
 
-    # Green (high vegetation) to brown (low vegetation) gradient
+    # Seleciona cor baseado em intervalos de NDVI
+    # Escala: verde (alta vegetação) a marrom (baixa vegetação)
     if ndvi < 0.3:
-        # Dark brown
+        # Marrom escuro - vegetação muito baixa
         return "#8B4513"
     elif ndvi < 0.5:
-        # Brown to tan
+        # Marrom claro - vegetação esparsa
         return "#CD853F"
     elif ndvi < 0.7:
-        # Tan to yellow-green
+        # Amarelo-verde - vegetação moderada
         return "#ADFF2F"
     elif ndvi < 0.85:
-        # Yellow-green to green
+        # Verde claro - vegetação alta
         return "#32CD32"
     else:
-        # Dark green (high vegetation)
+        # Verde escuro - vegetação densa (máximo vigor)
         return "#006400"
 
 
+# ==================== CRIAÇÃO DE MAPA INTERATIVO ====================
 def create_interactive_map(
     gdf: gpd.GeoDataFrame,
     center_coords: Tuple[float, float],
@@ -54,50 +81,67 @@ def create_interactive_map(
     area_ha: float = 0.0,
 ) -> folium.Map:
     """
-    Create an interactive Folium map with the polygon and metadata.
+    Cria um mapa Folium interativo com o polígono e metadados.
+
+    Gera um mapa personalizado com:
+    - Polígono colorido de acordo com NDVI
+    - Marcador no centroide
+    - Popup com informações da área
 
     Parameters
     ----------
     gdf : gpd.GeoDataFrame
-        GeoDataFrame containing the polygon geometry.
+        GeoDataFrame contendo a geometria do polígono.
     center_coords : Tuple[float, float]
-        (latitude, longitude) to center the map.
+        (latitude, longitude) para centrar o mapa.
     mean_ndvi : float, default=0.5
-        Mean NDVI value for color coding.
+        Valor médio de NDVI para codificação de cor.
     area_ha : float, default=0.0
-        Area of polygon in hectares.
+        Área do polígono em hectares.
 
     Returns
     -------
     folium.Map
-        Folium Map object ready for rendering.
+        Objeto Folium.Map pronto para renderização.
+
+    Example
+    -------
+    >>> m = create_interactive_map(gdf, (center_lat, center_lon), mean_ndvi=0.65)
+    >>> m.save('mapa.html')
     """
-    # Create base map with responsive sizing
+    # ==================== CRIAR MAPA BASE ====================
+    # Cria um mapa Folium com configurações responsivas
     m = folium.Map(
-        location=center_coords,
-        zoom_start=13,
-        tiles="OpenStreetMap",
-        prefer_canvas=True,  # Better rendering for mobile
+        location=center_coords,      # Coordenadas para centrar o mapa
+        zoom_start=13,               # Nível inicial de zoom (13 = zoom médio)
+        tiles="OpenStreetMap",       # Tiles base (OpenStreetMap é o padrão)
+        prefer_canvas=True,          # Melhor renderização em dispositivos móveis
     )
 
-    # Make the map container responsive
+    # Faz o mapa responsivo (100% da largura/altura do container)
     m.get_root().width = "100%"
     m.get_root().height = "100%"
 
-    # Get color based on NDVI
+    # ==================== OBTER COR BASEADA EM NDVI ====================
+    # Mapeia o valor médio de NDVI para uma cor
     polygon_color = get_color_for_ndvi(mean_ndvi)
 
-    # Add polygon to map
+    # ==================== ADICIONAR POLÍGONO AO MAPA ====================
+    # Itera sobre as linhas do GeoDataFrame (geralmente uma)
     for idx, row in gdf.iterrows():
         geometry = row.geometry
 
-        # Extract coordinates
+        # Processa apenas geometrias do tipo Polígono
         if geometry.geom_type == "Polygon":
+            # Extrai as coordenadas do exterior do polígono
             coords = list(geometry.exterior.coords)
-            # Convert to [lat, lon] format for Folium
+
+            # Converte de (longitude, latitude) para (latitude, longitude)
+            # Folium espera (lat, lon), não (lon, lat)
             coords_latlon = [(lat, lon) for lon, lat in coords]
 
-            # Create popup text
+            # ==================== CRIAR POPUP COM INFORMAÇÕES ====================
+            # Texto informativo que aparece ao clicar no polígono
             popup_text = f"""
             <b>Agricultural Area Analysis</b><br>
             Area: {area_ha:.2f} ha<br>
@@ -106,86 +150,103 @@ def create_interactive_map(
             <i>MODIS satellite data</i>
             """
 
-            # Add polygon
+            # ==================== ADICIONAR POLÍGONO ====================
             folium.Polygon(
-                locations=coords_latlon,
-                color=polygon_color,
-                fill=True,
-                fillColor=polygon_color,
-                fillOpacity=0.6,
-                weight=2,
-                popup=folium.Popup(popup_text, max_width=250),
+                locations=coords_latlon,         # Coordenadas do polígono
+                color=polygon_color,             # Cor da borda
+                fill=True,                       # Preencher o polígono
+                fillColor=polygon_color,         # Cor de preenchimento
+                fillOpacity=0.6,                 # Transparência (0.6 = 60% opaco)
+                weight=2,                        # Espessura da borda
+                popup=folium.Popup(popup_text, max_width=250),  # Popup ao clicar
             ).add_to(m)
 
-            # Add centroid marker
+            # ==================== ADICIONAR MARCADOR NO CENTROIDE ====================
+            # Marca o centro/centroide do polígono com um círculo azul
             folium.CircleMarker(
-                location=center_coords,
-                radius=8,
+                location=center_coords,          # Coordenadas do centro
+                radius=8,                        # Raio do círculo em pixels
                 popup=f"Center ({center_coords[0]:.4f}, {center_coords[1]:.4f})",
-                color="darkblue",
-                fill=True,
-                fillColor="blue",
-                fillOpacity=0.7,
-                weight=2,
+                color="darkblue",                # Cor da borda
+                fill=True,                       # Preencher o círculo
+                fillColor="blue",                # Cor de preenchimento
+                fillOpacity=0.7,                 # Transparência
+                weight=2,                        # Espessura da borda
             ).add_to(m)
 
     return m
 
 
+# ==================== ADICIONAR CONTROLE DE CAMADAS ====================
 def add_layer_control(m: folium.Map) -> folium.Map:
     """
-    Add layer control to the Folium map.
+    Adiciona controle interativo de camadas ao mapa Folium.
+
+    Permite ao usuário ativar/desativar diferentes camadas do mapa
+    (geralmente não usado neste projeto, mas disponível para expansões futuras).
 
     Parameters
     ----------
     m : folium.Map
-        Folium map object.
+        Objeto Folium.Map.
 
     Returns
     -------
     folium.Map
-        Map with layer control added.
+        Mesmo mapa com controle de camadas adicionado.
     """
     folium.LayerControl().add_to(m)
     return m
 
 
+# ==================== ADICIONAR ESCALA E FERRAMENTAS ====================
 def add_scale(m: folium.Map) -> folium.Map:
     """
-    Add a scale bar to the Folium map.
+    Adiciona um botão de tela cheia ao mapa Folium.
+
+    Permite ao usuário expandir o mapa para tela cheia para
+    melhor visualização dos detalhes.
 
     Parameters
     ----------
     m : folium.Map
-        Folium map object.
+        Objeto Folium.Map.
 
     Returns
     -------
     folium.Map
-        Map with scale bar added.
+        Mesmo mapa com botão de tela cheia adicionado.
     """
     from folium.plugins import Fullscreen
+
+    # Adiciona botão de tela cheia no canto superior direito
     Fullscreen(
-        position="topright",
-        force_separate_button=True,
+        position="topright",              # Posição do botão
+        force_separate_button=True,       # Criar botão separado (não combinado)
     ).add_to(m)
+
     return m
 
 
+# ==================== CRIAR LEGENDA NDVI ====================
 def create_ndvi_legend(m: folium.Map) -> folium.Map:
     """
-    Add an NDVI value legend to the map.
+    Adiciona uma legenda NDVI visual ao mapa.
+
+    Mostra os intervalo de cores e seus significados:
+    cores, valores de NDVI e interpretação de vegetação.
 
     Parameters
     ----------
     m : folium.Map
-        Folium map object.
+        Objeto Folium.Map.
 
     Returns
     -------
     folium.Map
-        Map with legend added.
+        Mesmo mapa com legenda adicionada.
     """
+    # HTML da legenda com estilo CSS personalizado
     legend_html = """
     <div style="position: absolute;
              top: 10px; left: 10px; width: 220px;
@@ -216,10 +277,12 @@ def create_ndvi_legend(m: folium.Map) -> folium.Map:
         <small><i>Data: MODIS NDVI (2000–2026)</i></small>
     </div>
     """
+    # Adiciona a legenda como elemento HTML ao mapa
     m.get_root().html.add_child(folium.Element(legend_html))
     return m
 
 
+# ==================== CRIAR MAPA COM TODOS OS RECURSOS ====================
 def create_full_featured_map(
     gdf: gpd.GeoDataFrame,
     center_coords: Tuple[float, float],
@@ -228,33 +291,44 @@ def create_full_featured_map(
     include_legend: bool = False,
 ) -> folium.Map:
     """
-    Create a complete interactive map with all features.
+    Cria um mapa interativo completo com todos os recursos.
+
+    Combina todas as funções anteriores para criar um mapa
+    totalmente funcional e visualmente informativo.
 
     Parameters
     ----------
     gdf : gpd.GeoDataFrame
-        GeoDataFrame with polygon geometry.
+        GeoDataFrame com geometria do polígono.
     center_coords : Tuple[float, float]
-        (latitude, longitude) map center.
+        (latitude, longitude) para centrar o mapa.
     mean_ndvi : float
-        Mean NDVI value.
+        Valor médio de NDVI.
     area_ha : float
-        Area in hectares.
+        Área em hectares.
     include_legend : bool, default=False
-        If False, legend is shown outside the map (in dashboard).
+        Se False, a legenda é mostrada fora do mapa (no dashboard).
+        Se True, inclui legenda no arquivo do mapa.
 
     Returns
     -------
     folium.Map
-        Complete interactive map.
+        Mapa interativo completo.
+
+    Example
+    -------
+    >>> m = create_full_featured_map(gdf, center, 0.65, 150.5)
+    >>> m.save('complete_map.html')
     """
-    # Create base map
+    # ==================== CRIAR MAPA BASE COM POLÍGONO ====================
     m = create_interactive_map(gdf, center_coords, mean_ndvi, area_ha)
 
-    # Add features
+    # ==================== ADICIONAR RECURSOS ====================
+    # Controle de camadas (permite ativar/desativar camadas)
     m = add_layer_control(m)
 
-    # Only include legend if specified (for standalone map files)
+    # Adiciona legenda somente se solicitado
+    # (geralmente a legenda está no dashboard, não no mapa)
     if include_legend:
         m = create_ndvi_legend(m)
 

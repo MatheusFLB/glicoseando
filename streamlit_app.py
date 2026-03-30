@@ -499,7 +499,7 @@ def main():
             f"""
             <div style="text-align: center; font-size: 14px; line-height: 1.6;">
                 <strong>{txt['creator']}</strong> Matheus Bissoli <br>
-                🌐 <a href="https://matheusflb.github.io/" target="_blank">{txt['personal_site']}</a>
+                🌐 <a href="https://matheusflb.github.io/" target="_blank">{txt['personal_site']}</a> &nbsp;|&nbsp;
                 💼 <a href="https://www.linkedin.com/in/matheusbissoli/" target="_blank">LinkedIn</a> &nbsp;|&nbsp;
                 💻 <a href="https://github.com/MatheusFLB" target="_blank">GitHub</a>
             </div>

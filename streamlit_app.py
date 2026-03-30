@@ -501,7 +501,8 @@ def main():
                 <strong>{txt['creator']}</strong> Matheus Bissoli <br>
                 🌐 <a href="https://matheusflb.github.io/" target="_blank">{txt['personal_site']}</a> &nbsp;|&nbsp;
                 💼 <a href="https://www.linkedin.com/in/matheusbissoli/" target="_blank">LinkedIn</a> &nbsp;|&nbsp;
-                💻 <a href="https://github.com/MatheusFLB" target="_blank">GitHub</a>
+                💻 <a href="https://github.com/MatheusFLB/" target="_blank">GitHub</a> &nbsp;|&nbsp;
+                🧑‍💻 <a href="https://github.com/MatheusFLB/glicoseando/" target="_blank">Source Code</a>
             </div>
             """,
             unsafe_allow_html=True

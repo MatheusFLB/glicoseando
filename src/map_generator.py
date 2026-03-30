@@ -6,6 +6,7 @@ Responsável por criar visualizações cartográficas usando Folium:
 - Coloração baseada em valores NDVI
 - Adição de legendas e controles
 - Marcadores e popups informativos
+- Camadas base: Satellite (padrão) e OpenStreetMap
 
 COLORIZAÇÃO POR NDVI:
 A cor representa a saúde da vegetação:
@@ -87,6 +88,7 @@ def create_interactive_map(
     - Polígono colorido de acordo com NDVI
     - Marcador no centroide
     - Popup com informações da área
+    - Múltiplas camadas base (Satellite e OpenStreetMap)
 
     Parameters
     ----------
@@ -110,11 +112,11 @@ def create_interactive_map(
     >>> m.save('mapa.html')
     """
     # ==================== CRIAR MAPA BASE ====================
-    # Cria um mapa Folium com configurações responsivas
+    # Cria um mapa Folium sem tiles inicialmente para adicionar camadas personalizadas
     m = folium.Map(
         location=center_coords,      # Coordenadas para centrar o mapa
         zoom_start=13,               # Nível inicial de zoom (13 = zoom médio)
-        tiles="OpenStreetMap",       # Tiles base (OpenStreetMap é o padrão)
+        tiles=None,                  # Sem tiles padrão (camadas serão adicionadas manualmente)
         prefer_canvas=True,          # Melhor renderização em dispositivos móveis
     )
 
@@ -122,23 +124,41 @@ def create_interactive_map(
     m.get_root().width = "100%"
     m.get_root().height = "100%"
 
+    # ==================== CAMADAS BASE ====================
+    # Adiciona camada OpenStreetMap (mapa de ruas padrão)
+    folium.TileLayer(
+        tiles="OpenStreetMap",
+        attr="© OpenStreetMap contributors",
+        name="OpenStreetMap",
+        overlay=False,               # Camada base, não sobreposição
+        control=True,                # Aparece no controle de camadas
+    ).add_to(m)
+
+    # Adiciona camada de satélite (padrão - primeira camada visível)
+    # Fonte: Esri World Imagery - imagens de satélite de alta resolução
+    folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attr="Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+        name="Satellite",
+        overlay=False,               # Camada base, não sobreposição
+        control=True,                # Aparece no controle de camadas
+    ).add_to(m)
+
     # ==================== OBTER COR BASEADA EM NDVI ====================
     # Mapeia o valor médio de NDVI para uma cor
     polygon_color = get_color_for_ndvi(mean_ndvi)
 
     # ==================== ADICIONAR POLÍGONO AO MAPA ====================
     # Itera sobre as linhas do GeoDataFrame (geralmente uma)
-    for idx, row in gdf.iterrows():
+    for _, row in gdf.iterrows():
         geometry = row.geometry
 
         # Processa apenas geometrias do tipo Polígono
         if geometry.geom_type == "Polygon":
             # Extrai as coordenadas do exterior do polígono
-            coords = list(geometry.exterior.coords)
-
             # Converte de (longitude, latitude) para (latitude, longitude)
             # Folium espera (lat, lon), não (lon, lat)
-            coords_latlon = [(lat, lon) for lon, lat in coords]
+            coords_latlon = [(lat, lon) for lon, lat in geometry.exterior.coords]
 
             # ==================== CRIAR POPUP COM INFORMAÇÕES ====================
             # Texto informativo que aparece ao clicar no polígono
@@ -177,13 +197,13 @@ def create_interactive_map(
     return m
 
 
-# ==================== ADICIONAR CONTROLE DE CAMADAS ====================
+# ==================== CONTROLE DE CAMADAS ====================
 def add_layer_control(m: folium.Map) -> folium.Map:
     """
     Adiciona controle interativo de camadas ao mapa Folium.
 
-    Permite ao usuário ativar/desativar diferentes camadas do mapa
-    (geralmente não usado neste projeto, mas disponível para expansões futuras).
+    Permite ao usuário ativar/desativar diferentes camadas do mapa,
+    incluindo as camadas base (Satellite e OpenStreetMap).
 
     Parameters
     ----------
@@ -196,35 +216,6 @@ def add_layer_control(m: folium.Map) -> folium.Map:
         Mesmo mapa com controle de camadas adicionado.
     """
     folium.LayerControl().add_to(m)
-    return m
-
-
-# ==================== ADICIONAR ESCALA E FERRAMENTAS ====================
-def add_scale(m: folium.Map) -> folium.Map:
-    """
-    Adiciona um botão de tela cheia ao mapa Folium.
-
-    Permite ao usuário expandir o mapa para tela cheia para
-    melhor visualização dos detalhes.
-
-    Parameters
-    ----------
-    m : folium.Map
-        Objeto Folium.Map.
-
-    Returns
-    -------
-    folium.Map
-        Mesmo mapa com botão de tela cheia adicionado.
-    """
-    from folium.plugins import Fullscreen
-
-    # Adiciona botão de tela cheia no canto superior direito
-    Fullscreen(
-        position="topright",              # Posição do botão
-        force_separate_button=True,       # Criar botão separado (não combinado)
-    ).add_to(m)
-
     return m
 
 

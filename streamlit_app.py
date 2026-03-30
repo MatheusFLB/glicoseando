@@ -334,8 +334,8 @@ def main():
             <div style="
                 width: 100%;
                 max-width: 800px;
-                height: 800px;
-                min-height: 600px;
+                height: 400px;
+                min-height: 400px;
                 border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                 overflow: hidden;
@@ -344,8 +344,8 @@ def main():
             </div>
         </div>
         """
-        # Exibe o mapa no Streamlit com altura de 800px
-        components.v1.html(responsive_html, height=800, scrolling=False)
+        # Exibe o mapa no Streamlit com altura de 400px
+        components.v1.html(responsive_html, height=400, scrolling=False)
 
         # ==================== ANÁLISE DE SÉRIE TEMPORAL + DETECÇÃO DE MUDANÇAS ====================
         st.header(txt['timeseries_header'])  # Cabeçalho da seção
